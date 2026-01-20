@@ -1,0 +1,40 @@
+name: AI News Collection
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  collect-news:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout代码
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: 安装依赖
+      run: |
+        pip install -r requirements.txt
+
+    - name: 采集AI资讯
+      env:
+        FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+      run: |
+        python src/main.py
+
+    - name: 提交报告到仓库
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/reports/*.md || true
+        git diff --quiet && git diff --staged --quiet || git commit -m "🤖 自动更新AI资讯 - $(date +'%Y-%m-%d %H:%M')"
+        git push || true
